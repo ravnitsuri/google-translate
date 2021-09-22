@@ -5,9 +5,9 @@ const chalk = require("chalk");
 // const translate = require("google-translate-api");
 const translate = require("@vitalets/google-translate-api");
 
-const limiter = require("limiter");
-const RateLimiter = limiter.RateLimiter;
-const limited = new RateLimiter({ tokensPerInterval: 1, interval: 200 });
+const { RateLimiter } = require("limiter");
+// const RateLimiter = limiter.RateLimiter;
+const limiter = new RateLimiter({ tokensPerInterval: 1, interval: 200 });
 
 const app = express();
 
@@ -18,14 +18,23 @@ defaultRouter.post("/", async (req, res, next) => {
 
     let allInputKeys = Object.keys(inputObj);
     let outputObj = {};
+
+    console.clear();
+
     for (const [index, value] of allInputKeys.entries()) {
       let response = await translate(inputObj[value], { from: "en", to: "no" });
-      await limited.removeTokens(1);
+      await limiter.removeTokens(1);
       outputObj[value] = response.text;
-      console.log({ index: `${index + 1} of ${allInputKeys.length}`, key: value, input: inputObj[value], output: response.text });
+      console.log({
+        progress: `${Number(((index + 1) / allInputKeys.length) * 100).toFixed(0)}%`,
+        index: `${index + 1} of ${allInputKeys.length}`,
+        key: value,
+        input: inputObj[value],
+        output: response.text,
+      });
     }
 
-    res.send({ payload: outputObj });
+    res.send(outputObj);
   } catch (error) {
     console.log({ error });
 
